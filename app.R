@@ -9,7 +9,8 @@ ui <- fluidPage(
 )
 
 set.seed(as.integer(Sys.Date()))
-target <- sample(words_common, 1)
+target <- "gives"
+  #sample(words_common, 1)
 
 server <- function(input, output) {
   
@@ -46,21 +47,33 @@ compare_words <- function(target_str, guess_str) {
   
   target <- strsplit(target_str, "")[[1]]
   guess <- strsplit(guess_str, "")[[1]]
-  result <- character(nchar(guess_str))
+  remaining <- character(0)
+  result <- rep("not-in-word", 5)
   
-  for (i in seq_along(target)){
-    
+  for (i in seq_along(guess)) {
     if (guess[i] == target[i]) {
       result[i] <- "correct"
-    } else if (guess[i] %in% target) {
-      result[i] <- "in-word"
     } else {
-      result[i] <- "not-in-word"
+      # The `remaining` vector contains the letters in target
+      # we didn't get right
+      remaining <- c(remaining, target[i])
+    }
+  }
+  
+  for (i in seq_along(guess)) {
+    # For a letter to have the status 'in-word' it needs
+    # - To be in the vector of target letters we didn't get right
+    # - NOT to be in the target in the right position
+    if (guess[i] != target[i] && guess[i] %in% remaining) {
+      result[i] <- "in-word"
+      # Removing the 'in-word' letter from `remaining`
+      remaining <- remaining[-match(guess[i], remaining)]
     }
   }
   
   result
 }
+
 
 # A new function that returns a data structure with more information
 check_words <- function(target_str, guess_str) {
