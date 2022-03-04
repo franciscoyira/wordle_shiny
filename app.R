@@ -3,11 +3,71 @@ library(shiny)
 source("wordlist.R")
 
 ui <- fluidPage(
-  textInput("guess", ""),
-  actionButton("go", "Go"),
-  verbatimTextOutput("result", placeholder = TRUE),
-  p("[x] means the letter is correct"),
-  p("(x) means the letter is in the word but in a different place"),
+  tags$head(tags$style(
+    HTML("
+      .container-fluid {
+        max-width: 500px;
+      }
+    
+      #result {
+        display: grid;
+        grid-template-columns: repeat(5, 50px);
+        gap: 5px;
+        padding: 15px;
+        justify-content: center;
+      }
+      
+      #result > .guess-letter {
+        width: 50px;
+        height:50px;
+        font-size: 20px;
+        display: grid;
+        place-content: center;
+      }
+      
+      .guess-letter {
+      padding: 4px;
+        border-radius: 5px;
+        color: white;
+        font-weight: bold;
+      }
+      
+      .in-word {
+        background-color: #c8b458;
+      }
+      
+      .not-in-word {
+        background-color: #787c7e;
+      }
+      
+      .correct {
+        background-color: #6aa964;
+      }
+      
+      .input-wrapper {
+        display: flex;
+        align-items: flex-end;
+        justify-content: center;
+        padding-bottom: 10px;
+      }
+      
+      .input-wrapper > div {
+        margin-bottom: 0;
+      }
+      
+      .input-wrapper > button {
+        margin-left: 10px;
+      }
+    ")
+  )),
+  uiOutput("result"),
+  p(span("x", class="guess-letter correct"), "means the letter is correct"),
+  p(span("x", class="guess-letter in-word"), "means the letter is in the word but in a different place"),
+  div(
+    textInput("guess", ""),
+    actionButton("go", "Go"),
+    class = "input-wrapper"
+  ),
   verbatimTextOutput("keyboard", placeholder = TRUE)
 )
 
@@ -19,7 +79,7 @@ server <- function(input, output) {
   
   all_gueses <- reactiveVal(character()) 
   
-  output$result <- renderPrint({
+  output$result <- renderUI({
     if (!(input$guess %in% words_all)) {
       req(FALSE, cancelOutput = TRUE)
     }
@@ -28,13 +88,12 @@ server <- function(input, output) {
     all_gueses(all_gueses_new)
     
     # Not efficient, but fine for now
-    out_str <- vapply(all_gueses(), function(guess) {
+    out_str <- lapply(all_gueses(), function(guess) {
       result <- check_words(target, guess)
       format_result(result)
-    },
-    character(1))
+    })
 
-    cat(paste(out_str, collapse = "\n"))
+    out_str
     
   }) |> 
     bindEvent(input$go)
@@ -57,23 +116,15 @@ server <- function(input, output) {
     
     keys
   })
-  
-
-  
 }
 
 format_result <- function(r) {
-  out_str <- ""
+  out_divs <- tagList()
   for (i in seq_along(r$letters)) {
-    if (r$result[i] == "correct") {
-      out_str <- paste0(out_str, "[", r$letters[i], "]")
-    } else if (r$result[i] == "in-word") {
-      out_str <- paste0(out_str, "(", r$letters[i], ")")
-    } else {
-      out_str <- paste0(out_str, " ", r$letters[i], " ")
-    }
+    out_divs[[i]] <-
+      div(r$letters[i], class = paste("guess-letter", r$result[i]))
   }
-  out_str
+  out_divs
 }
 
 compare_words <- function(target_str, guess_str) {
