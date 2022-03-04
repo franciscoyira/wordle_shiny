@@ -3,9 +3,27 @@ library(shiny)
 source("wordlist.R")
 
 ui <- fluidPage(
+  tags$head(tags$style(
+    HTML("
+      #result {
+        display: grid;
+        grid-template-columns: repeat(5, 50px);
+        gap: 5px;
+      }
+      
+      .guess-letter {
+        border: 1px solid blanchedalmond;
+        width: 50px;
+        height:50px;
+        display: grid;
+        place-content: center;
+        border-radius: 5px
+      }
+    ")
+  )),
   textInput("guess", ""),
   actionButton("go", "Go"),
-  verbatimTextOutput("result", placeholder = TRUE),
+  uiOutput("result"),
   p("[x] means the letter is correct"),
   p("(x) means the letter is in the word but in a different place"),
   verbatimTextOutput("keyboard", placeholder = TRUE)
@@ -19,7 +37,7 @@ server <- function(input, output) {
   
   all_gueses <- reactiveVal(character()) 
   
-  output$result <- renderPrint({
+  output$result <- renderUI({
     if (!(input$guess %in% words_all)) {
       req(FALSE, cancelOutput = TRUE)
     }
@@ -28,13 +46,12 @@ server <- function(input, output) {
     all_gueses(all_gueses_new)
     
     # Not efficient, but fine for now
-    out_str <- vapply(all_gueses(), function(guess) {
+    out_str <- lapply(all_gueses(), function(guess) {
       result <- check_words(target, guess)
       format_result(result)
-    },
-    character(1))
+    })
 
-    cat(paste(out_str, collapse = "\n"))
+    out_str
     
   }) |> 
     bindEvent(input$go)
@@ -57,23 +74,23 @@ server <- function(input, output) {
     
     keys
   })
-  
-
-  
 }
 
 format_result <- function(r) {
-  out_str <- ""
+  out_divs <- tagList()
   for (i in seq_along(r$letters)) {
-    if (r$result[i] == "correct") {
-      out_str <- paste0(out_str, "[", r$letters[i], "]")
-    } else if (r$result[i] == "in-word") {
-      out_str <- paste0(out_str, "(", r$letters[i], ")")
-    } else {
-      out_str <- paste0(out_str, " ", r$letters[i], " ")
-    }
+    letterText <-
+      if (r$result[i] == "correct") {
+        paste("[", r$letters[i], "]")
+      } else if (r$result[i] == "in-word") {
+        paste("(", r$letters[i], ")")
+      } else {
+        paste(" ", r$letters[i], " ")
+      }
+    out_divs[[i]] <-
+      div(letterText, class = "guess-letter")
   }
-  out_str
+  out_divs
 }
 
 compare_words <- function(target_str, guess_str) {
