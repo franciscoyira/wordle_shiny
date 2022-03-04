@@ -14,13 +14,23 @@ target <- "gives"
 
 server <- function(input, output) {
   
+  all_gueses <- character()
+  
   output$result <- renderPrint({
     if (!(input$guess %in% words_all)) {
       req(FALSE, cancelOutput = TRUE)
     }
     
-    result <- check_words(target, input$guess)
-    format_result(result)
+    all_gueses <<- c(all_gueses, input$guess)
+    
+    # Not efficient, but fine for now
+    out_str <- vapply(all_gueses, function(guess) {
+      result <- check_words(target, guess)
+      format_result(result)
+    },
+    character(1))
+
+    cat(paste(out_str, collapse = "\n"))
     
   }) |> 
     bindEvent(input$go)
