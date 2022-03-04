@@ -5,27 +5,69 @@ source("wordlist.R")
 ui <- fluidPage(
   tags$head(tags$style(
     HTML("
+      .container-fluid {
+        max-width: 500px;
+      }
+    
       #result {
         display: grid;
         grid-template-columns: repeat(5, 50px);
         gap: 5px;
+        padding: 15px;
+        justify-content: center;
+      }
+      
+      #result > .guess-letter {
+        width: 50px;
+        height:50px;
+        font-size: 20px;
+        display: grid;
+        place-content: center;
       }
       
       .guess-letter {
-        border: 1px solid blanchedalmond;
-        width: 50px;
-        height:50px;
-        display: grid;
-        place-content: center;
-        border-radius: 5px
+      padding: 4px;
+        border-radius: 5px;
+        color: white;
+        font-weight: bold;
+      }
+      
+      .in-word {
+        background-color: #c8b458;
+      }
+      
+      .not-in-word {
+        background-color: #787c7e;
+      }
+      
+      .correct {
+        background-color: #6aa964;
+      }
+      
+      .input-wrapper {
+        display: flex;
+        align-items: flex-end;
+        justify-content: center;
+        padding-bottom: 10px;
+      }
+      
+      .input-wrapper > div {
+        margin-bottom: 0;
+      }
+      
+      .input-wrapper > button {
+        margin-left: 10px;
       }
     ")
   )),
-  textInput("guess", ""),
-  actionButton("go", "Go"),
   uiOutput("result"),
-  p("[x] means the letter is correct"),
-  p("(x) means the letter is in the word but in a different place"),
+  p(span("x", class="guess-letter correct"), "means the letter is correct"),
+  p(span("x", class="guess-letter in-word"), "means the letter is in the word but in a different place"),
+  div(
+    textInput("guess", ""),
+    actionButton("go", "Go"),
+    class = "input-wrapper"
+  ),
   verbatimTextOutput("keyboard", placeholder = TRUE)
 )
 
@@ -79,16 +121,8 @@ server <- function(input, output) {
 format_result <- function(r) {
   out_divs <- tagList()
   for (i in seq_along(r$letters)) {
-    letterText <-
-      if (r$result[i] == "correct") {
-        paste("[", r$letters[i], "]")
-      } else if (r$result[i] == "in-word") {
-        paste("(", r$letters[i], ")")
-      } else {
-        paste(" ", r$letters[i], " ")
-      }
     out_divs[[i]] <-
-      div(letterText, class = "guess-letter")
+      div(r$letters[i], class = paste("guess-letter", r$result[i]))
   }
   out_divs
 }
