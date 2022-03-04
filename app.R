@@ -5,7 +5,10 @@ source("wordlist.R")
 ui <- fluidPage(
   textInput("guess", ""),
   actionButton("go", "Go"),
-  verbatimTextOutput("result", placeholder = TRUE)
+  verbatimTextOutput("result", placeholder = TRUE),
+  p("[x] means the letter is correct"),
+  p("(x) means the letter is in the word but in a different place"),
+  verbatimTextOutput("keyboard", placeholder = TRUE)
 )
 
 set.seed(as.integer(Sys.Date()))
@@ -14,17 +17,18 @@ target <- "gives"
 
 server <- function(input, output) {
   
-  all_gueses <- character()
+  all_gueses <- reactiveVal(character()) 
   
   output$result <- renderPrint({
     if (!(input$guess %in% words_all)) {
       req(FALSE, cancelOutput = TRUE)
     }
     
-    all_gueses <<- c(all_gueses, input$guess)
+    all_gueses_new <- c(all_gueses(), input$guess) 
+    all_gueses(all_gueses_new)
     
     # Not efficient, but fine for now
-    out_str <- vapply(all_gueses, function(guess) {
+    out_str <- vapply(all_gueses(), function(guess) {
       result <- check_words(target, guess)
       format_result(result)
     },
@@ -34,6 +38,28 @@ server <- function(input, output) {
     
   }) |> 
     bindEvent(input$go)
+  
+  output$keyboard <- renderText({
+    keys <- paste(
+      " q  w  e  r  t  y  u  i  o  p ",
+      "  a  s  d  f  g  h  j  k  l ",
+      "   z  x  c  v  b  n  m ",
+      sep = "\n"
+    )
+    
+    used_letters <- paste(all_gueses(), collapse = "")
+    used_letters <- strsplit(used_letters, "")[[1]]
+    used_letters <- unique(used_letters)
+    
+    for (letter in used_letters) {
+      keys <- sub(letter, " ", keys)
+    }
+    
+    keys
+  })
+  
+
+  
 }
 
 format_result <- function(r) {
